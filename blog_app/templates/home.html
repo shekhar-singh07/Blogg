@@ -1,25 +1,40 @@
 {% extends 'base.html' %}
+{% load blog_extras %}
 
-{% block title %}Home — DevBlog{% endblock %}
+{% block title %}
+{% if search_query %}Search: "{{ search_query }}" —{% endif %}
+{% if category_filter %}{{ category_filter.name }} —{% endif %}
+{% if tag_filter %}#{{ tag_filter.name }} —{% endif %}
+DevBlog
+{% endblock %}
 
 {% block content %}
 <!-- Page Header -->
 <div class="page-header">
     <div class="header-row">
         <div>
-            <h1>{% if search_query %}Search: "{{ search_query }}"{% else %}Latest Posts{% endif %}</h1>
-            <p>{% if search_query %}{{ posts|length }} result{{ posts|length|pluralize }} found{% else %}Discover stories, insights, and ideas from the community.{% endif %}</p>
+            <h1>
+                {% if search_query %}Search: "{{ search_query }}"
+                {% elif category_filter %}{{ category_filter.name }}
+                {% elif tag_filter %}#{{ tag_filter.name }}
+                {% else %}Latest Posts{% endif %}
+            </h1>
+            <p>
+                {% if search_query %}{{ page_obj.paginator.count }} result{{ page_obj.paginator.count|pluralize }} found
+                {% elif category_filter %}{{ category_filter.description|default:"Browse posts in this category." }}
+                {% elif tag_filter %}Articles tagged with #{{ tag_filter.name }}
+                {% else %}Discover stories, insights, and ideas from the community.{% endif %}
+            </p>
         </div>
 
-        <!-- Search Bar -->
         <form method="GET" action="{% url 'home' %}" class="search-bar">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
-            <input type="text" name="q" value="{{ search_query }}" placeholder="Search posts by title or content..." autocomplete="off">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Search posts..." autocomplete="off">
             {% if search_query %}
             <a href="{% url 'home' %}" class="search-clear">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </a>
@@ -28,81 +43,164 @@
     </div>
 </div>
 
-<!-- Blog Grid -->
-<div class="blog-grid">
-    {% for post in posts %}
-    <article class="blog-card">
-        <div class="card-accent"></div>
-        <div class="card-body">
-            <!-- Top row: badge + actions -->
-            <div class="card-top">
-                <span class="card-tag">Article</span>
-                {% if user == post.author %}
-                <div class="card-actions">
-                    <a href="{% url 'update_post' post.pk %}" class="card-action-btn edit" title="Edit post">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+<div class="layout-grid">
+    <!-- Main Column -->
+    <div>
+        <div class="blog-grid">
+            {% for post in page_obj %}
+            <article class="blog-card">
+                {% if post.cover_image %}
+                <a href="{% url 'post_detail' post.pk %}" class="card-cover" target="_blank">
+                    <img src="{{ post.cover_image.url }}" alt="{{ post.title }}" loading="lazy">
+                </a>
+                {% endif %}
+
+                <div class="card-body">
+                    <div class="card-top">
+                        <div class="card-badges">
+                            {% if post.status == 'draft' %}
+                                <span class="card-badge badge-draft">Draft</span>
+                            {% endif %}
+                            {% if post.category %}
+                                <a href="{% url 'category_posts' post.category.slug %}" class="card-badge badge-category">
+                                    <span class="category-dot" style="background: {{ post.category.color }};"></span>
+                                    {{ post.category.name }}
+                                </a>
+                            {% endif %}
+                        </div>
+
+                        {% if user == post.author %}
+                        <div class="card-actions">
+                            <a href="{% url 'update_post' post.pk %}" class="card-action-btn edit" title="Edit">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </a>
+                            <a href="{% url 'delete_post' post.pk %}" class="card-action-btn delete" title="Delete">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <a href="{% url 'post_detail' post.pk %}" target="_blank">
+                        <h2 class="card-title">{{ post.title }}</h2>
                     </a>
-                    <a href="{% url 'delete_post' post.pk %}" class="card-action-btn delete" title="Delete post">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    <p class="card-excerpt">{{ post.content|striptags|truncatewords:25 }}</p>
+
+                    <div class="card-meta">
+                        <span>
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {{ post.content|reading_time }} min read
+                        </span>
+                        <span>{{ post.created_at|date:"M d" }}</span>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <a href="{% url 'user_profile' post.author.username %}" class="card-author">
+                        <div class="card-author-avatar">
+                            {% if post.author.profile.avatar %}
+                                <img src="{{ post.author.profile.avatar.url }}" alt="">
+                            {% else %}
+                                {{ post.author.username|slice:":2"|upper }}
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="card-author-name">{{ post.author.username }}</div>
+                        </div>
                     </a>
+
+                    <div class="card-stats">
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'like_post' post.pk %}" class="card-stat {% if post.pk in liked_post_ids %}liked{% endif %}" title="Like">
+                                <svg fill="{% if post.pk in liked_post_ids %}currentColor{% else %}none{% endif %}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                                {{ post.total_likes }}
+                            </a>
+                            <a href="{% url 'toggle_bookmark' post.pk %}" class="card-stat {% if post.pk in bookmarked_post_ids %}bookmarked{% endif %}" title="Bookmark">
+                                <svg fill="{% if post.pk in bookmarked_post_ids %}currentColor{% else %}none{% endif %}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                            </a>
+                        {% else %}
+                            <span class="card-stat">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                                {{ post.total_likes }}
+                            </span>
+                        {% endif %}
+
+                        <a href="{% url 'post_detail' post.pk %}#comments" class="card-stat" title="Comments" target="_blank">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            {{ post.total_comments }}
+                        </a>
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                    </svg>
+                </div>
+                <h3>{% if search_query %}No results found{% else %}No posts yet{% endif %}</h3>
+                <p>{% if search_query %}Try adjusting your search terms or <a href="{% url 'home' %}" style="color: var(--accent); font-weight: 600;">browse all posts</a>.{% else %}Be the first to share your ideas.{% endif %}</p>
+                {% if user.is_authenticated and not search_query %}
+                <div style="margin-top: 20px;">
+                    <a href="{% url 'create_post' %}" class="btn btn-primary btn-sm">Write Your First Post</a>
                 </div>
                 {% endif %}
             </div>
-
-            <!-- Title and excerpt -->
-            <a href="{% url 'post_detail' post.pk %}">
-                <h2 class="card-title">{{ post.title }}</h2>
-            </a>
-            <p class="card-excerpt">{{ post.content }}</p>
+            {% endfor %}
         </div>
 
-        <!-- Footer -->
-        <div class="card-footer">
-            <div class="card-author">
-                <div class="card-avatar">{{ post.author.username|slice:":2"|upper }}</div>
-                <div>
-                    <div class="card-author-name">{{ post.author.username }}</div>
-                    <div class="card-date">{{ post.created_at|date:"M d, Y" }}</div>
-                </div>
-            </div>
-            <div class="card-stats">
-                {% if user.is_authenticated %}
-                <a href="{% url 'like_post' post.pk %}" class="card-stat {% if post.pk in liked_post_ids %}liked{% endif %}" title="Like">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                    {{ post.total_likes }}
-                </a>
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="page-link">&laquo;</a>
+            {% else %}
+                <span class="page-link disabled">&laquo;</span>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="page-link active">{{ num }}</span>
                 {% else %}
-                <span class="card-stat">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                    {{ post.total_likes }}
-                </span>
+                    <a href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}" class="page-link">{{ num }}</a>
                 {% endif %}
+            {% endfor %}
 
-                <a href="{% url 'post_detail' post.pk %}" class="card-stat" title="Comments">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                    {{ post.total_comments }}
-                </a>
-            </div>
-        </div>
-    </article>
-    {% empty %}
-    <div class="empty-state">
-        <div class="empty-icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
-            </svg>
-        </div>
-        <h3>{% if search_query %}No posts match your search{% else %}No posts yet{% endif %}</h3>
-        <p>{% if search_query %}Try different keywords or <a href="{% url 'home' %}" style="color: var(--accent);">clear your search</a>.{% else %}Be the first to share your ideas with the community.{% endif %}</p>
-        {% if user.is_authenticated and not search_query %}
-        <div style="margin-top: 24px;">
-            <a href="{% url 'create_post' %}" class="btn btn-primary">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                Write Your First Post
-            </a>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="page-link">&raquo;</a>
+            {% else %}
+                <span class="page-link disabled">&raquo;</span>
+            {% endif %}
         </div>
         {% endif %}
     </div>
-    {% endfor %}
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-widget">
+            <h3>
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                Categories
+            </h3>
+            <ul class="category-list">
+                <li class="category-item">
+                    <a href="{% url 'home' %}" class="category-link {% if not category_filter and not tag_filter %}active{% endif %}">
+                        <span>All Posts</span>
+                    </a>
+                </li>
+                {% for cat in categories %}
+                <li class="category-item">
+                    <a href="{% url 'category_posts' cat.slug %}" class="category-link {% if category_filter == cat %}active{% endif %}">
+                        <span style="display: flex; align-items: center;">
+                            <span class="category-dot" style="background: {{ cat.color }};"></span>
+                            {{ cat.name }}
+                        </span>
+                        <span class="category-count">{{ cat.posts.count }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </aside>
 </div>
 {% endblock %}
