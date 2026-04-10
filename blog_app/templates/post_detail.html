@@ -1,264 +1,150 @@
 {% extends 'base.html' %}
 {% load blog_extras %}
 
-{% block title %}{{ post.title }} — DevBlog{% endblock %}
+{% block body_class %}no-sidebar{% endblock %}
 
 {% block content %}
-<a href="{% url 'home' %}" class="back-link">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-    Back to all posts
-</a>
+<article class="post-detail">
+    <div class="detail-meta-row">
+        <a href="{% url 'home' %}" class="page-btn" style="padding: 6px 16px; font-size: 13px;">
+            &larr; Back to Feed
+        </a>
+        <div style="display: flex; gap: 8px;">
+            {% if post.category %}
+                <span class="pro-badge" style="background: {{ post.category.color }}1a; color: {{ post.category.color }}; border-color: {{ post.category.color }}33;">
+                    {{ post.category.name|upper }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
 
-<div class="detail-card">
+    <h1 class="detail-title">{{ post.title }}</h1>
+
+    <div class="profile-header-main" style="margin-bottom: 40px; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="comment-author-avatar" style="width: 48px; height: 48px;">
+                {% if post.author.profile.avatar %}
+                    <img src="{{ post.author.profile.avatar.url }}" alt="">
+                {% else %}
+                    <div class="avatar-fallback">{{ post.author.username|slice:":1"|upper }}</div>
+                {% endif %}
+            </div>
+            <div class="comment-author-info">
+                <a href="{% url 'user_profile' post.author.username %}" class="comment-author-name" style="font-size: 16px;">{{ post.author.username }}</a>
+                <span class="comment-date">{{ post.created_at|date:"M d, Y" }} &bull; {{ post.content|reading_time }} MIN READ</span>
+            </div>
+        </div>
+        <div class="profile-actions">
+            {% if user == post.author %}
+                <div style="display: flex; gap: 12px;">
+                    <a href="{% url 'update_post' post.pk %}" class="page-btn">Edit Post</a>
+                    <a href="{% url 'delete_post' post.pk %}" class="page-btn" style="color: var(--danger); border-color: rgba(244, 63, 94, 0.2); background: rgba(244, 63, 94, 0.05);">Delete</a>
+                </div>
+            {% else %}
+                <button class="btn-pro">Follow</button>
+            {% endif %}
+        </div>
+    </div>
+
     {% if post.cover_image %}
-    <div class="detail-cover">
-        <img src="{{ post.cover_image.url }}" alt="{{ post.title }}">
+    <div class="featured-image" style="height: 480px; border-radius: var(--radius-lg); margin-bottom: 48px; width: 100%; overflow: hidden;">
+        <img src="{{ post.cover_image.url }}" alt="{{ post.title }}" style="width: 100%; height: 100%; object-fit: cover;">
     </div>
     {% endif %}
 
-    <div class="detail-header">
-        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            {% if post.status == 'draft' %}
-                <span class="card-badge badge-draft">Draft</span>
-            {% endif %}
-            {% if post.category %}
-                <a href="{% url 'category_posts' post.category.slug %}" class="card-badge badge-category">
-                    <span class="category-dot" style="background: {{ post.category.color }};"></span>
-                    {{ post.category.name }}
-                </a>
-            {% endif %}
-            {% for tag in post.tags.all %}
-                <a href="{% url 'tag_posts' tag.slug %}" class="card-badge badge-category" style="color: var(--text-tertiary);">#{{ tag.name }}</a>
-            {% endfor %}
-        </div>
-
-        <h1>{{ post.title }}</h1>
-
-        <div class="detail-meta">
-            <a href="{% url 'user_profile' post.author.username %}" class="card-author">
-                <div class="card-author-avatar" style="width: 36px; height: 36px; font-size: 12px;">
-                    {% if post.author.profile.avatar %}
-                        <img src="{{ post.author.profile.avatar.url }}" alt="">
-                    {% else %}
-                        {{ post.author.username|slice:":2"|upper }}
-                    {% endif %}
-                </div>
-                <div>
-                    <div class="card-author-name">{{ post.author.username }}</div>
-                    <div class="card-date">{{ post.created_at|date:"F d, Y" }} · {{ post.content|reading_time }} min read</div>
-                </div>
-            </a>
-
-            {% if post.updated_at != post.created_at %}
-            <span style="font-size: 12px; color: var(--text-tertiary); background: var(--bg-tertiary); padding: 4px 10px; border-radius: var(--radius-full);">
-                Edited {{ post.updated_at|date:"M d, Y" }}
-            </span>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="detail-body ql-editor">
+    <div class="prose">
         {{ post.content|render_html }}
     </div>
 
-    <div class="detail-actions">
-        <div class="card-stats" style="gap: 12px;">
+    <div class="post-footer-actions" style="justify-content: center; padding: 24px;">
+        <div class="featured-stats" style="display: flex; gap: 32px; align-items: center;">
             {% if user.is_authenticated %}
-            <a href="{% url 'like_post' post.pk %}?next=detail" class="card-stat {% if user_has_liked %}liked{% endif %}" style="font-size: 14px;">
-                <svg fill="{% if user_has_liked %}currentColor{% else %}none{% endif %}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                {{ post.total_likes }} Like{{ post.total_likes|pluralize }}
-            </a>
-            <a href="{% url 'toggle_bookmark' post.pk %}?next=detail" class="card-stat {% if user_has_bookmarked %}bookmarked{% endif %}" style="font-size: 14px;">
-                <svg fill="{% if user_has_bookmarked %}currentColor{% else %}none{% endif %}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
-                Save
-            </a>
+                <a href="{% url 'like_post' post.pk %}?next=detail" class="icon-btn" style="gap: 8px; color: {% if user_has_liked %}var(--danger){% else %}var(--text-secondary){% endif %}">
+                    <svg width="24" height="24" fill="{% if user_has_liked %}currentColor{% else %}none{% endif %}" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                    <span>{{ post.total_likes }} Likes</span>
+                </a>
+                <a href="{% url 'toggle_bookmark' post.pk %}?next=detail" class="icon-btn" style="gap: 8px; color: {% if user_has_bookmarked %}var(--accent){% else %}var(--text-secondary){% endif %}">
+                    <svg width="24" height="24" fill="{% if user_has_bookmarked %}currentColor{% else %}none{% endif %}" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                    <span>Bookmark</span>
+                </a>
             {% else %}
-            <span class="card-stat" style="font-size: 14px;">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                {{ post.total_likes }} Like{{ post.total_likes|pluralize }}
-            </span>
+                <span class="icon-btn" style="gap: 8px;">
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                    {{ post.total_likes }} Likes
+                </span>
             {% endif %}
-
-            <span class="card-stat" style="font-size: 14px; cursor: default;">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                {{ post.total_comments }} Comment{{ post.total_comments|pluralize }}
-            </span>
         </div>
+    </div>
 
-        {% if user == post.author %}
-        <div style="display: flex; gap: 8px;">
-            <a href="{% url 'update_post' post.pk %}" class="btn btn-ghost btn-sm">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                Edit
-            </a>
-            <a href="{% url 'delete_post' post.pk %}" class="btn btn-sm" style="background: var(--danger-light); color: var(--danger); border: 1px solid #fecaca;">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                Delete
-            </a>
+    <section class="comment-section" id="comments">
+        <h2 class="comment-section-header">
+            Comments
+            <span class="pro-badge">{{ post.total_comments }}</span>
+        </h2>
+
+        {% if user.is_authenticated %}
+        <div class="comment-input-card">
+            <form method="POST" action="{% url 'add_comment' post.pk %}">
+                {% csrf_token %}
+                <textarea name="content" class="comment-textarea" placeholder="What are your thoughts?" required></textarea>
+                <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+                    <button type="submit" class="btn-pro">Post Comment</button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="comment-input-card" style="text-align: center; border-style: dashed;">
+            <p style="color: var(--text-tertiary);">Please <a href="{% url 'login' %}?next={{ request.path }}" style="color: var(--accent); font-weight: 700;">log in</a> to participate in the discussion.</p>
         </div>
         {% endif %}
-    </div>
-</div>
 
-<!-- Related Posts -->
-{% if related_posts %}
-<div style="margin-top: 48px;">
-    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 20px; color: var(--text-primary);">Related Posts</h2>
-    <div class="blog-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
-        {% for rpost in related_posts %}
-        <article class="blog-card">
-            {% if rpost.cover_image %}
-            <a href="{% url 'post_detail' rpost.pk %}" class="card-cover" style="height: 120px;" target="_blank">
-                <img src="{{ rpost.cover_image.url }}" alt="{{ rpost.title }}">
-            </a>
-            {% endif %}
-            <div class="card-body" style="padding: 16px 20px;">
-                <a href="{% url 'post_detail' rpost.pk %}" target="_blank">
-                    <h3 class="card-title" style="font-size: 15px;">{{ rpost.title }}</h3>
-                </a>
-                <p class="card-excerpt" style="font-size: 13px; -webkit-line-clamp: 2;">{{ rpost.content|striptags|truncatewords:15 }}</p>
-            </div>
-        </article>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<!-- Comments Section -->
-<div class="comments-section" id="comments">
-    <h2>
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 22px; height: 22px;"><path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-        Comments ({{ post.total_comments }})
-    </h2>
-
-    {% if user.is_authenticated %}
-    <div class="comment-form">
-        <form method="POST" action="{% url 'add_comment' post.pk %}">
-            {% csrf_token %}
-            <div style="display: flex; gap: 14px; align-items: flex-start;">
-                <div class="card-author-avatar" style="width: 36px; height: 36px; flex-shrink: 0;">
-                    {% if user.profile.avatar %}
-                        <img src="{{ user.profile.avatar.url }}" alt="">
-                    {% else %}
-                        {{ user.username|slice:":2"|upper }}
-                    {% endif %}
-                </div>
-                <div style="flex: 1;">
-                    <textarea name="content" placeholder="Share your thoughts..." required></textarea>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary btn-sm">Post Comment</button>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
-    {% else %}
-    <div style="background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: var(--radius-lg); padding: 24px; text-align: center; margin-bottom: 20px;">
-        <p style="color: var(--text-tertiary); font-size: 14px;">
-            <a href="{% url 'login' %}?next={{ request.path }}" style="color: var(--accent); font-weight: 600;">Log in</a> or
-            <a href="{% url 'register' %}" style="color: var(--accent); font-weight: 600;">sign up</a> to leave a comment.
-        </p>
-    </div>
-    {% endif %}
-
-    {% for comment in comments %}
-    <div class="comment-thread">
-        <div class="comment-item">
-            <div class="comment-header">
-                <a href="{% url 'user_profile' comment.author.username %}" class="comment-author">
-                    <div class="comment-avatar">
+        <div class="comment-list">
+            {% for comment in comments %}
+            <div class="comment-card">
+                <div class="comment-header">
+                    <div class="comment-author-avatar">
                         {% if comment.author.profile.avatar %}
                             <img src="{{ comment.author.profile.avatar.url }}" alt="">
                         {% else %}
-                            {{ comment.author.username|slice:":2"|upper }}
+                            <div class="avatar-fallback">{{ comment.author.username|slice:":1"|upper }}</div>
                         {% endif %}
                     </div>
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="comment-name">{{ comment.author.username }}</span>
-                            {% if comment.author == post.author %}
-                            <span class="comment-badge">Author</span>
+                    <div class="comment-author-info">
+                        <span class="comment-author-name">{{ comment.author.username }}</span>
+                        <span class="comment-date">{{ comment.created_at|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+                <div class="comment-content">
+                    {{ comment.content }}
+                </div>
+                
+                {% for reply in comment.replies.all %}
+                <div class="comment-reply-thread">
+                    <div class="comment-header">
+                        <div class="comment-author-avatar" style="width: 24px; height: 24px;">
+                            {% if reply.author.profile.avatar %}
+                                <img src="{{ reply.author.profile.avatar.url }}" alt="">
+                            {% else %}
+                                <div class="fallback" style="font-size: 10px;">{{ reply.author.username|slice:":1"|upper }}</div>
                             {% endif %}
                         </div>
-                        <div class="comment-time">{{ comment.created_at|date:"M d, Y · g:i A" }}</div>
-                    </div>
-                </a>
-            </div>
-            <p class="comment-body">{{ comment.content }}</p>
-
-            <div class="comment-actions">
-                {% if user.is_authenticated %}
-                <button type="button" class="comment-action-btn" onclick="toggleReplyForm({{ comment.pk }})">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                    Reply
-                </button>
-                {% endif %}
-                {% if user == comment.author %}
-                <form method="POST" action="{% url 'delete_comment' comment.pk %}" style="display: inline;" onsubmit="return confirm('Delete this comment?');">
-                    {% csrf_token %}
-                    <button type="submit" class="comment-action-btn delete">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        Delete
-                    </button>
-                </form>
-                {% endif %}
-            </div>
-
-            {% if user.is_authenticated %}
-            <div class="reply-form-container" id="reply-form-{{ comment.pk }}">
-                <form method="POST" action="{% url 'reply_comment' post.pk comment.pk %}">
-                    {% csrf_token %}
-                    <textarea name="content" class="form-control" placeholder="Write a reply..." style="min-height: 60px; font-size: 13px;" required></textarea>
-                    <div style="margin-top: 8px; text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="toggleReplyForm({{ comment.pk }})">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm">Reply</button>
-                    </div>
-                </form>
-            </div>
-            {% endif %}
-        </div>
-
-        {% for reply in comment.replies.all %}
-        <div class="comment-item reply">
-            <div class="comment-header">
-                <a href="{% url 'user_profile' reply.author.username %}" class="comment-author">
-                    <div class="comment-avatar" style="width: 26px; height: 26px; font-size: 9px;">
-                        {% if reply.author.profile.avatar %}
-                            <img src="{{ reply.author.profile.avatar.url }}" alt="">
-                        {% else %}
-                            {{ reply.author.username|slice:":2"|upper }}
-                        {% endif %}
-                    </div>
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span class="comment-name" style="font-size: 13px;">{{ reply.author.username }}</span>
-                            {% if reply.author == post.author %}
-                            <span class="comment-badge">Author</span>
-                            {% endif %}
+                        <div class="comment-author-info">
+                            <span class="comment-author-name" style="font-size: 12px;">{{ reply.author.username }}</span>
+                            <span class="comment-date" style="font-size: 9px;">{{ reply.created_at|date:"M d, Y" }}</span>
                         </div>
-                        <div class="comment-time">{{ reply.created_at|date:"M d, Y · g:i A" }}</div>
                     </div>
-                </a>
+                    <div class="comment-content" style="font-size: 14px; margin-left: 36px;">
+                        {{ reply.content }}
+                    </div>
+                </div>
+                {% endfor %}
             </div>
-            <p class="comment-body" style="padding-left: 36px; font-size: 14px;">{{ reply.content }}</p>
-            <div class="comment-actions" style="padding-left: 36px;">
-                {% if user == reply.author %}
-                <form method="POST" action="{% url 'delete_comment' reply.pk %}" style="display: inline;" onsubmit="return confirm('Delete this reply?');">
-                    {% csrf_token %}
-                    <button type="submit" class="comment-action-btn delete">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 13px; height: 13px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        Delete
-                    </button>
-                </form>
-                {% endif %}
-            </div>
+            {% empty %}
+                <div style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+                    No comments yet. Start the conversation!
+                </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
-    {% empty %}
-    <div style="text-align: center; padding: 48px 20px; color: var(--text-tertiary);">
-        <p style="font-size: 14px;">No comments yet. Be the first to share your thoughts!</p>
-    </div>
-    {% endfor %}
-</div>
+    </section>
+</article>
 {% endblock %}

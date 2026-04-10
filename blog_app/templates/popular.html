@@ -1,59 +1,63 @@
 {% extends 'base.html' %}
 {% load blog_extras %}
 
-{% block title %}Trending — DevBlog{% endblock %}
-
 {% block content %}
-<div class="page-header">
-    <h1>Trending Posts</h1>
-    <p>The most loved articles on the platform.</p>
+<div class="page-intro">
+    <h1 class="page-title">Trending Articles</h1>
+    <p class="page-subtitle">The most read and discussed stories in the community today.</p>
 </div>
 
-<div class="blog-grid">
+<div class="post-grid">
     {% for post in posts %}
-    <article class="blog-card" style="position: relative;">
-        <div style="position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; background: var(--gradient-1); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; z-index: 5; box-shadow: var(--shadow-md);">#{{ forloop.counter }}</div>
-
-        {% if post.cover_image %}
-        <a href="{% url 'post_detail' post.pk %}" class="card-cover" target="_blank">
-            <img src="{{ post.cover_image.url }}" alt="{{ post.title }}" loading="lazy">
-        </a>
-        {% endif %}
-
-        <div class="card-body">
-            <div class="card-top">
-                <div class="card-badges">
-                    {% if post.category %}
-                        <span class="card-badge badge-category">{{ post.category.name }}</span>
+        <article class="grid-card">
+            <div style="position: absolute; top: 12px; left: 12px; width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; z-index: 5; box-shadow: 0 4px 12px var(--accent-glow);">
+                {{ forloop.counter }}
+            </div>
+            
+            <a href="{% url 'post_detail' post.pk %}" class="grid-image">
+                {% if post.cover_image %}
+                    <img src="{{ post.cover_image.url }}" alt="">
+                {% else %}
+                    <div class="image-placeholder"></div>
+                {% endif %}
+            </a>
+            
+            <div class="grid-content">
+                <div class="card-meta-top" style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-tertiary); margin-bottom: 8px;">
+                    <a href="{% url 'user_profile' post.author.username %}" class="grid-author" style="font-weight: 600; font-size: 15px; color: var(--text-primary);">
+                        {{ post.author.username }}
+                    </a>
+                    <span style="font-size: 10px;">&bull;</span>
+                    <span>{{ post.created_at|date:"M d, Y" }}</span>
+                </div>
+                <a href="{% url 'post_detail' post.pk %}">
+                    <h3 class="grid-title">{{ post.title }}</h3>
+                </a>
+                <p class="grid-excerpt">{{ post.content|striptags|truncatewords:12 }}</p>
+                
+                <div class="featured-footer" style="margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div class="featured-stats" style="display: flex; gap: 16px;">
+                        <a href="{% url 'like_post' post.pk %}?next={{ request.path }}" style="display: flex; align-items: center; gap: 6px;" title="Like Post" class="icon-btn">
+                            <svg width="14" height="14" fill="{% if post.pk in liked_post_ids %}var(--danger){% else %}none{% endif %}" viewBox="0 0 24 24" stroke="currentColor" style="{% if post.pk in liked_post_ids %}color: var(--danger);{% endif %}"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                            <span style="{% if post.pk in liked_post_ids %}color: var(--danger);{% endif %}">{{ post.like_count|default:post.total_likes }}</span>
+                        </a>
+                        <a href="{% url 'post_detail' post.pk %}#comments" style="display: flex; align-items: center; gap: 6px;" title="View Comments" class="icon-btn">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            <span>{{ post.total_comments }}</span>
+                        </a>
+                    </div>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'toggle_bookmark' post.pk %}?next={{ request.path }}" style="color: var(--text-tertiary); display: flex; align-items: center;" title="Bookmark" class="icon-btn">
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                        </a>
                     {% endif %}
                 </div>
             </div>
-            <a href="{% url 'post_detail' post.pk %}" target="_blank"><h2 class="card-title">{{ post.title }}</h2></a>
-            <p class="card-excerpt">{{ post.content|striptags|truncatewords:25 }}</p>
-            <div class="card-meta">
-                <span>{{ post.content|reading_time }} min read</span>
-            </div>
-        </div>
-
-        <div class="card-footer">
-            <a href="{% url 'user_profile' post.author.username %}" class="card-author">
-                <div class="card-author-avatar">{{ post.author.username|slice:":2"|upper }}</div>
-                <div>
-                    <div class="card-author-name">{{ post.author.username }}</div>
-                    <div class="card-date">{{ post.created_at|date:"M d, Y" }}</div>
-                </div>
-            </a>
-            <div class="card-stat liked" style="cursor: default;">
-                <svg fill="var(--like-color)" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                {{ post.like_count }}
-            </div>
-        </div>
-    </article>
+        </article>
     {% empty %}
-    <div class="empty-state">
-        <h3>No trending posts yet</h3>
-        <p>Be the first to publish engaging content!</p>
-    </div>
+        <div class="empty-state">
+            <p>No trending articles yet. Start publishing to see them here!</p>
+        </div>
     {% endfor %}
 </div>
 {% endblock %}

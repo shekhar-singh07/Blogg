@@ -1,111 +1,121 @@
 {% extends 'base.html' %}
 {% load blog_extras %}
 
-{% block title %}{{ profile_user.username }}'s Profile — DevBlog{% endblock %}
-
 {% block content %}
-<div class="profile-header">
-    <div class="profile-avatar">
-        {% if profile_user.profile.avatar %}
-            <img src="{{ profile_user.profile.avatar.url }}" alt="{{ profile_user.username }}">
-        {% else %}
-            {{ profile_user.username|slice:":2"|upper }}
-        {% endif %}
-    </div>
-    <div class="profile-name">{{ profile_user.username }}</div>
-    <div style="color: var(--text-tertiary); font-size: 13px; font-weight: 500;">
-        Member since {{ profile_user.date_joined|date:"F Y" }}
-    </div>
+<div class="profile-hero">
+    <div class="profile-banner"></div>
+    <div class="profile-info-section">
+        <div class="profile-header-main">
+            <div class="profile-avatar-lg">
+                {% if profile_user.profile.avatar %}
+                    <img src="{{ profile_user.profile.avatar.url }}" alt="{{ profile_user.username }}">
+                {% else %}
+                    <div class="fallback">{{ profile_user.username|slice:":1"|upper }}</div>
+                {% endif %}
+            </div>
 
-    {% if profile_user.profile.bio %}
-        <p class="profile-bio">{{ profile_user.profile.bio }}</p>
-    {% endif %}
+            <div class="profile-identity">
+                <h1>
+                    {{ profile_user.username }}
+                    <span class="pro-badge">PRO CREATOR</span>
+                </h1>
+                <p class="profile-bio-text">
+                    {% if profile_user.profile.bio %}
+                        {{ profile_user.profile.bio }}
+                    {% else %}
+                        Explorer, creator, and technology enthusiast. Sharing insights on modern engineering and design.
+                    {% endif %}
+                </p>
+                
+                <div class="profile-stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value">{{ total_posts }}</span>
+                        <span class="stat-label">Article{{ total_posts|pluralize }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{{ total_likes_received }}</span>
+                        <span class="stat-label">Like{{ total_likes_received|pluralize }}</span>
+                    </div>
+                </div>
+            </div>
 
-    {% if user == profile_user %}
-        <a href="{% url 'edit_profile' %}" class="btn btn-ghost btn-sm" style="margin-top: 8px;">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            Edit Profile
-        </a>
-    {% endif %}
-
-    <div class="profile-stats">
-        <div class="profile-stat">
-            <div class="profile-stat-value">{{ total_posts }}</div>
-            <div class="profile-stat-label">Posts</div>
+            <div class="profile-actions">
+                {% if user.is_authenticated and user == profile_user %}
+                    <a href="{% url 'edit_profile' %}" class="btn-pro">Edit Profile</a>
+                {% else %}
+                    <button class="btn-pro">Follow</button>
+                    <button class="icon-btn" style="width: 44px; height: 44px; background: var(--bg-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    </button>
+                {% endif %}
+            </div>
         </div>
-        <div class="profile-stat">
-            <div class="profile-stat-value">{{ total_likes_received }}</div>
-            <div class="profile-stat-label">Likes</div>
+
+        <div class="profile-tabs">
+            <a href="#" class="tab-link active">Articles</a>
+            <a href="#" class="tab-link">Series</a>
+            <a href="#" class="tab-link">About</a>
         </div>
     </div>
 </div>
 
-<h2 style="font-size: 20px; font-weight: 700; margin-bottom: 20px; color: var(--text-primary);">
-    Posts by {{ profile_user.username }}
-</h2>
-
-<div class="blog-grid">
+<div class="post-grid">
     {% for post in page_obj %}
-    <article class="blog-card">
-        {% if post.cover_image %}
-        <a href="{% url 'post_detail' post.pk %}" class="card-cover" style="height: 140px;" target="_blank">
-            <img src="{{ post.cover_image.url }}" alt="{{ post.title }}">
-        </a>
-        {% endif %}
-
-        <div class="card-body">
-            <div class="card-top">
-                <div class="card-badges">
-                    {% if post.status == 'draft' %}
-                        <span class="card-badge badge-draft">Draft</span>
-                    {% endif %}
-                    {% if post.category %}
-                        <span class="card-badge badge-category">{{ post.category.name }}</span>
+        <article class="grid-card">
+            <a href="{% url 'post_detail' post.pk %}" class="grid-image">
+                {% if post.cover_image %}
+                    <img src="{{ post.cover_image.url }}" alt="">
+                {% else %}
+                    <div class="image-placeholder"></div>
+                {% endif %}
+            </a>
+            <div class="grid-content">
+                <div class="card-meta-top" style="margin-bottom: 8px;">
+                    <span style="font-size: 13px; color: var(--text-secondary);">{{ post.created_at|date:"M d, Y" }}</span>
+                </div>
+                <a href="{% url 'post_detail' post.pk %}">
+                    <h3 class="grid-title">{{ post.title }}</h3>
+                </a>
+                <p class="grid-excerpt">{{ post.content|striptags|truncatewords:12 }}</p>
+                
+                <div class="featured-footer" style="margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div class="featured-stats" style="display: flex; gap: 16px;">
+                        <a href="{% url 'like_post' post.pk %}?next={{ request.path }}" style="display: flex; align-items: center; gap: 6px;" title="Like Post" class="icon-btn">
+                            <svg width="14" height="14" fill="{% if post.pk in liked_post_ids %}var(--danger){% else %}none{% endif %}" viewBox="0 0 24 24" stroke="currentColor" style="{% if post.pk in liked_post_ids %}color: var(--danger);{% endif %}"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                            <span style="{% if post.pk in liked_post_ids %}color: var(--danger);{% endif %}">{{ post.total_likes }}</span>
+                        </a>
+                        <a href="{% url 'post_detail' post.pk %}#comments" style="display: flex; align-items: center; gap: 6px;" title="View Comments" class="icon-btn">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            <span>{{ post.total_comments }}</span>
+                        </a>
+                    </div>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'toggle_bookmark' post.pk %}?next={{ request.path }}" style="color: var(--text-tertiary); display: flex; align-items: center;" title="Bookmark" class="icon-btn">
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                        </a>
                     {% endif %}
                 </div>
             </div>
-            <a href="{% url 'post_detail' post.pk %}" target="_blank">
-                <h2 class="card-title">{{ post.title }}</h2>
-            </a>
-            <p class="card-excerpt">{{ post.content|striptags|truncatewords:20 }}</p>
-        </div>
-
-        <div class="card-footer">
-            <div class="card-date">{{ post.created_at|date:"M d, Y" }}</div>
-            <div class="card-stats">
-                <span class="card-stat">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                    {{ post.total_likes }}
-                </span>
-                <span class="card-stat">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                    {{ post.total_comments }}
-                </span>
-            </div>
-        </div>
-    </article>
+        </article>
     {% empty %}
-    <div class="empty-state">
-        <h3>No posts yet</h3>
-        <p>{{ profile_user.username }} hasn't published any posts yet.</p>
-    </div>
+        <div class="empty-state">
+            <p>No articles published yet.</p>
+        </div>
     {% endfor %}
 </div>
 
 {% if page_obj.has_other_pages %}
-<div class="pagination">
+<div class="paginator">
     {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}" class="page-link">&laquo;</a>
+        <a href="?page={{ page_obj.previous_page_number }}" class="page-btn">Previous</a>
     {% endif %}
-    {% for num in page_obj.paginator.page_range %}
-        {% if page_obj.number == num %}
-            <span class="page-link active">{{ num }}</span>
-        {% else %}
-            <a href="?page={{ num }}" class="page-link">{{ num }}</a>
-        {% endif %}
-    {% endfor %}
+    <div class="page-numbers">
+        {% for num in page_obj.paginator.page_range %}
+            <span class="page-num {% if page_obj.number == num %}active{% endif %}">{{ num }}</span>
+        {% endfor %}
+    </div>
     {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
+        <a href="?page={{ page_obj.next_page_number }}" class="page-btn">Next</a>
     {% endif %}
 </div>
 {% endif %}
